@@ -8,78 +8,122 @@ clc
 zp = 1.602*1e-19;
 %% Wasserstoffkern 1 Proton
 zwss = 1.602*1e-19;
-
 %% elektrische Ladung
-e_l = 1.602*1e-19;
+e_l = -1.602*1e-19;
 %% Elektrische Feldkonstante
 e_0 = 8.854*1e-12;
 %% Masse Teilchen in kg
-mp = 1.672*1e-27;
-
+me = 9.11 *1e-31;
 %% Geschwindigkeit v in ms
-v = 3e8; %Lichtgeschwindigkeit
-%% Winkel der Abweichung von 90 Grad bis -90 Grad
-winkel = pi/4;
-b = ((zp*zwss*e_l^2)/(4*pi*e_0*mp*v^2)).*cot(winkel/2);
+v = 300; % 300 m/s
 
-%% Male erst Punktladung in blau in Abstand 5 cm vom Koordinatenursprung
-
-xp = 0.1;  % x-Koordinate des Punktes statisch
-yp = 0;  % y-Koordinate des Punktes statisch
-rp = 0.08;  % Radius des Punktes
+%% Definiere meine Matrix, Fovx = 1 nm, Fovy = 1 nm
+Fovx = 1*1e-9; % 1 nm
+Fovy = 1*1e-9;
+N = 1000;
+dFx = Fovx/N;
+dFy = Fovy/N;
+FovxVektor = [-Fovx/2:dFx:Fovx/2];
+FovyVektor = [-Fovy/2:dFy:Fovy/2];
+[xm ym] = meshgrid(FovxVektor,FovyVektor);
+M = sqrt(xm.^2+ym.^2);
 
 figure(1)
-fill(xp + rp*cos(linspace(0, 2*pi)), yp + rp*sin(linspace(0, 2*pi)), 'b')
-xlim([0 10])
-ylim([-30 100])
+plot(0,0,'or','MarkerFaceColor','r')
+hold on
+plot(xm(round(N/2),1),ym(end,1),'or','MarkerFaceColor','r')
 grid on
-xlabel('x [cm]')
+xlabel('x [nm]')
 ylabel('y [cm]')
+xlim([1.2*xm(1,1) 1.2*xm(1,end)])
+ylim([1.2*ym(1,1) 1.2*ym(end,1)])
 
-xpf = 0;
-ypf = b;
+Fc = (zp*e_l)/(4*pi*e_0*M(1,1)^2);
+a = Fc / me;
 
-r0 = sqrt(xpf^2+ypf^2);
-winkelstart = pi/2; % in radiand phi
-r_res = sqrt(xp^2 + yp^2) ; % xp const, rres const
+Nt = 10000;
+tend = 1e-12; % pikoSekunden
+deltaT = tend/Nt;
+t = [0:deltaT:tend];
 
-for phi = [winkelstart:-pi/100:0]
+%% VZ von M Feld, Koordinatensystem
+M(1:end,1:round(N/2)) = M(1:end,1:round(N/2)).*-1;
+M(round(N/2)+1:end,round(N/2):end) = M(round(N/2)+1:end,round(N/2):end).*-1;
 
-    r0 = b*(1+cos(phi)/sin(phi)); %betrag
-    xpf = r0*sin(phi);
-    ypf = b;
+winkel_neu = 0;
 
-    r1 = r0 - r_res;
+for i = 1:5
+    rneu = (0.5*a*(t(i)+deltaT)^2) + (v*(t(i)));
+    if (abs(rneu) <= abs(M(1,1))) && (winkel_neu <=2*pi)
+        phi_begin = 0;
+        phi = [phi_begin:pi/100:2*pi];
 
-    Fc = ((e_l^2)/(4*pi*e_0))*(1/r1^2);
-    %probieren als richtung
-    vy = v*sin(phi)
-    grenze = sqrt(r1^2+vy^2);
-    % beta = asin((r_res-xpf)/r1);
-    % Fcx = Fc*cos(beta);
-    % Fcy = Fc*sin(beta);
+        winkel_neu = (t(i)+deltaT)*v / rneu * (-1); % in radiant, (-1), da F Betrachtung anziehend, sonst +1
+        %winkel_neu = winkel_neu *(360/2*pi)
 
-    if grenze > b
+        if (winkel_neu <= pi/2) && (winkel_neu >= 0)
+            x_wert = rneu*cos(winkel_neu);
+            x_stelle = find(xm(1,1:end) >= x_wert);
+            x_stelle = x_stelle(1);
+            x_wert = xm(1,x_stelle);
+
+            y_wert = rneu*sin(winkel_neu);
+            y_stelle = find(ym(1:end,1) >= y_wert);
+            y_stelle = y_stelle(end);
+            y_wert = ym(y_stelle,1);
+        end
+        if (winkel_neu > pi/2) && (winkel_neu <= pi)
+            x_wert = rneu*cos(pi-winkel_neu);
+            x_stelle = find(xm(1,1:end) >= x_wert);
+            x_stelle = x_stelle(end);
+            x_wert = xm(1,x_stelle);
+
+            y_wert = rneu*sin(pi-winkel_neu);
+            y_stelle = find(ym(1:end,1) >= y_wert);
+            y_stelle = y_stelle(end);
+            y_wert = ym(y_stelle,1);
+        end
+        if (winkel_neu > pi) && (winkel_neu <= (3*pi/2))
+            x_wert = rneu*cos(winkel_neu-pi);
+            x_stelle = find(xm(1,1:end) >= x_wert);
+            x_stelle = x_stelle(end);
+            x_wert = xm(1,x_stelle);
+
+            y_wert = rneu*sin(winkel_neu-pi);
+            y_stelle = find(ym(1:end,1) >= y_wert);
+            y_stelle = y_stelle(1);
+            y_wert = ym(y_stelle,1);
+        end
+        if (winkel_neu > 3*pi/2) && (winkel_neu <= 2*pi)
+            x_wert = rneu*cos(winkel_neu-(3*pi/2));
+            x_stelle = find(xm(1,1:end) >= x_wert);
+            x_stelle = x_stelle(end);
+            x_wert = xm(1,x_stelle);
+
+            y_wert = rneu*sin(winkel_neu-(3*pi/2));
+            y_stelle = find(ym(1:end,1) >= y_wert);
+            y_stelle = y_stelle(end);
+            y_wert = ym(y_stelle,1);
+        end
         figure(1)
         clf
-        plot(xp,yp,'ob','MarkerFaceColor','b')
+        plot(0,0,'or','MarkerFaceColor','r')
         hold on
-        plot(xpf,grenze,'or','MarkerFaceColor','r')
-        xlim([-2*xp 2*xp])
-        ylim([-2*b 2*b])
+        plot(x_wert,y_wert,'or','MarkerFaceColor','r')
         grid on
-        xlabel('x [cm]')
-        ylabel('y [cm]')
+        xlabel('x [m]')
+        ylabel('y [m]')
+        xlim([3*xm(1,1) 3*xm(1,end)])
+        ylim([3*ym(1,1) 3*ym(end,1)])
     else
-        figure(1)
-        clf
-        plot(xp,yp,'ob','MarkerFaceColor','b')
-        hold on
-        plot(xpf,ypf,'or','MarkerFaceColor','r')
-        xlim([-2*xp 2*xp])
-        ylim([-2*b 2*b])
-        grid on
-        xlabel('x [cm]')
-        ylabel('y [cm]')
+        break;
     end
+    disp([x_wert y_wert])
+
+    
 end
+
+
+
+
+
