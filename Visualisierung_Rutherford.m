@@ -15,11 +15,11 @@ e_0 = 8.854*1e-12;
 %% Masse Teilchen in kg
 me = 9.11 *1e-31;
 %% Geschwindigkeit v in ms
-v = 300; % 300 m/s
+v = 300; %m/s  
 
-%% Definiere meine Matrix, Fovx = 1 nm, Fovy = 1 nm
-Fovx = 1*1e-9; % 1 nm
-Fovy = 1*1e-9;
+%% Definiere meine Matrix, Fovx = 10 nm, Fovy = 10 nm
+Fovx = 10*1e-9; % 10 nm
+Fovy = 10*1e-9;
 N = 1000;
 dFx = Fovx/N;
 dFy = Fovy/N;
@@ -35,16 +35,11 @@ plot(xm(round(N/2),1),ym(end,1),'or','MarkerFaceColor','r')
 grid on
 xlabel('x [nm]')
 ylabel('y [cm]')
-xlim([3*xm(1,1) 3*xm(1,end)])
-ylim([3*ym(1,1) 3*ym(end,1)])
+xlim([10*xm(1,1) 10*xm(1,end)])
+ylim([10*ym(1,1) 10*ym(end,1)])
 
-Fc = (zp*e_l)/(4*pi*e_0*M(1,1)^2);
-a = Fc / me;
-
-rstart = sqrt(xm(round(N/2),1)^2+ym(end,1)^2);
-
-Nt = 100;
-tend = 1e-12; % pikoSekunden
+Nt = 1000;
+tend = 10e-12; % mS
 deltaT = tend/Nt;
 t = [0:deltaT:tend];
 
@@ -52,27 +47,40 @@ t = [0:deltaT:tend];
 M(1:end,1:round(N/2)) = M(1:end,1:round(N/2)).*-1;
 M(round(N/2)+1:end,round(N/2):end) = M(round(N/2)+1:end,round(N/2):end).*-1;
 
-winkel_neu = 0;
+xk = xm(round(N/2),1);
+yk = ym(end,1);
+
+Fc = (zp*e_l)/(4*pi*e_0*M(1,1)^2);
+
+Fcx = Fc.*cos(pi/4);
+ax = Fcx / me*-1;
+Fcy = Fc.*sin(pi/4)*-1;
+ay = Fcy / me*-1;
 
 for i = 1:length(t)
-    delta_s = (0.5*a*(deltaT)^2) + (v*(deltaT)); %% Das ist der Weg den mein teilchen gelaufen ist
-    rneu = sqrt(rstart^2 - delta_s^2); %% Länge des neuen Abstands
-    v = a*t(i)+deltaT;
-    Fc = (zp*e_l)/(4*pi*e_0*rneu^2);
-    a = Fc / me;
-    x_wert = xm(round(N/2),1)+delta_s;
-    y_wert = rneu;
+    vx = ax*t(i);
+    vy = ay*t(i);
+    pause(0.01)
 
+    delta_sx = (0.5*ax*(t(i))^2) + (vx*(t(i)));
+    delta_sy = (0.5*ay*(t(i))^2) + (vy*(t(i)));
+
+    xk = xk +delta_sx;
+    yk = yk +delta_sy;
+    
     figure(1)
     clf
     plot(0,0,'or','MarkerFaceColor','r')
     hold on
-    plot(x_wert,y_wert,'or','MarkerFaceColor','r')
+    plot(xk,yk,'or','MarkerFaceColor','r')
     grid on
     xlabel('x [m]')
     ylabel('y [m]')
-    xlim([3*xm(1,1) 3*xm(1,end)])
-    ylim([3*ym(1,1) 3*ym(end,1)])
+    xlim([10*xm(1,1) 10*xm(1,end)])
+    ylim([10*ym(1,1) 10*ym(end,1)])
+
+    Fc = (zp*e_l)/(4*pi*e_0*sqrt((xk^2)+(yk^2))^2);
+
 end
 
 
